@@ -1264,7 +1264,8 @@ def vscode_msg(ext="ultralytics.ultralytics-snippets") -> str:
 
 # Check first-install steps
 PREFIX = colorstr("Ultralytics: ")
-SETTINGS = SettingsManager()  # initialize settings
+file = Path("/home/grail/yolo_develop/depth-enhanced-yolo/exp/logs/settings.json")
+SETTINGS = SettingsManager(file=file)  # initialize settings
 # initialize persistent cache
 PERSISTENT_CACHE = JSONDict(USER_CONFIG_DIR / "persistent_cache.json")
 DATASETS_DIR = Path(SETTINGS["datasets_dir"])  # global datasets directory

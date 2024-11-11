@@ -1,3 +1,4 @@
+import torch
 from ultralytics.utils import (
     DEFAULT_CFG_DICT,
     callbacks,
@@ -22,5 +23,10 @@ class PoseTrain():
             "task": self.task,
         }  # method defaults
         args = {**overrides, **custom, **kwargs, "mode": "train"}
-        # TODO: check this part
         self.trainer = Trainer(self.model, overrides=args, _callbacks=self.callbacks)
+        if torch.cuda.is_available():
+            world_size = 1
+        self.trainer._setup_train(world_size)
+        self.trainer._do_train(world_size=world_size)
+
+

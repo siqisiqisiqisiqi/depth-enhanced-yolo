@@ -25,7 +25,7 @@ from ultralytics.utils import (
     PYTHON_VERSION,
     TORCHVISION_VERSION,
     WINDOWS,
-    # __version__,
+    __version__,
     colorstr,
 )
 from ultralytics.utils.checks import check_version
@@ -133,106 +133,106 @@ def get_gpu_info(index):
     return f"{properties.name}, {properties.total_memory / (1 << 20):.0f}MiB"
 
 
-# def select_device(device="", batch=0, newline=False, verbose=True):
-#     """
-#     Selects the appropriate PyTorch device based on the provided arguments.
+def select_device(device="", batch=0, newline=False, verbose=True):
+    """
+    Selects the appropriate PyTorch device based on the provided arguments.
 
-#     The function takes a string specifying the device or a torch.device object and returns a torch.device object
-#     representing the selected device. The function also validates the number of available devices and raises an
-#     exception if the requested device(s) are not available.
+    The function takes a string specifying the device or a torch.device object and returns a torch.device object
+    representing the selected device. The function also validates the number of available devices and raises an
+    exception if the requested device(s) are not available.
 
-#     Args:
-#         device (str | torch.device, optional): Device string or torch.device object.
-#             Options are 'None', 'cpu', or 'cuda', or '0' or '0,1,2,3'. Defaults to an empty string, which auto-selects
-#             the first available GPU, or CPU if no GPU is available.
-#         batch (int, optional): Batch size being used in your model. Defaults to 0.
-#         newline (bool, optional): If True, adds a newline at the end of the log string. Defaults to False.
-#         verbose (bool, optional): If True, logs the device information. Defaults to True.
+    Args:
+        device (str | torch.device, optional): Device string or torch.device object.
+            Options are 'None', 'cpu', or 'cuda', or '0' or '0,1,2,3'. Defaults to an empty string, which auto-selects
+            the first available GPU, or CPU if no GPU is available.
+        batch (int, optional): Batch size being used in your model. Defaults to 0.
+        newline (bool, optional): If True, adds a newline at the end of the log string. Defaults to False.
+        verbose (bool, optional): If True, logs the device information. Defaults to True.
 
-#     Returns:
-#         (torch.device): Selected device.
+    Returns:
+        (torch.device): Selected device.
 
-#     Raises:
-#         ValueError: If the specified device is not available or if the batch size is not a multiple of the number of
-#             devices when using multiple GPUs.
+    Raises:
+        ValueError: If the specified device is not available or if the batch size is not a multiple of the number of
+            devices when using multiple GPUs.
 
-#     Examples:
-#         >>> select_device("cuda:0")
-#         device(type='cuda', index=0)
+    Examples:
+        >>> select_device("cuda:0")
+        device(type='cuda', index=0)
 
-#         >>> select_device("cpu")
-#         device(type='cpu')
+        >>> select_device("cpu")
+        device(type='cpu')
 
-#     Note:
-#         Sets the 'CUDA_VISIBLE_DEVICES' environment variable for specifying which GPUs to use.
-#     """
-#     if isinstance(device, torch.device) or str(device).startswith("tpu"):
-#         return device
+    Note:
+        Sets the 'CUDA_VISIBLE_DEVICES' environment variable for specifying which GPUs to use.
+    """
+    if isinstance(device, torch.device) or str(device).startswith("tpu"):
+        return device
 
-#     s = f"Ultralytics {__version__} 🚀 Python-{PYTHON_VERSION} torch-{torch.__version__} "
-#     device = str(device).lower()
-#     for remove in "cuda:", "none", "(", ")", "[", "]", "'", " ":
-#         device = device.replace(remove, "")  # to string, 'cuda:0' -> '0' and '(0, 1)' -> '0,1'
-#     cpu = device == "cpu"
-#     mps = device in {"mps", "mps:0"}  # Apple Metal Performance Shaders (MPS)
-#     if cpu or mps:
-#         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # force torch.cuda.is_available() = False
-#     elif device:  # non-cpu device requested
-#         if device == "cuda":
-#             device = "0"
-#         if "," in device:
-#             device = ",".join([x for x in device.split(",") if x])  # remove sequential commas, i.e. "0,,1" -> "0,1"
-#         visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-#         os.environ["CUDA_VISIBLE_DEVICES"] = device  # set environment variable - must be before assert is_available()
-#         if not (torch.cuda.is_available() and torch.cuda.device_count() >= len(device.split(","))):
-#             LOGGER.info(s)
-#             install = (
-#                 "See https://pytorch.org/get-started/locally/ for up-to-date torch install instructions if no "
-#                 "CUDA devices are seen by torch.\n"
-#                 if torch.cuda.device_count() == 0
-#                 else ""
-#             )
-#             raise ValueError(
-#                 f"Invalid CUDA 'device={device}' requested."
-#                 f" Use 'device=cpu' or pass valid CUDA device(s) if available,"
-#                 f" i.e. 'device=0' or 'device=0,1,2,3' for Multi-GPU.\n"
-#                 f"\ntorch.cuda.is_available(): {torch.cuda.is_available()}"
-#                 f"\ntorch.cuda.device_count(): {torch.cuda.device_count()}"
-#                 f"\nos.environ['CUDA_VISIBLE_DEVICES']: {visible}\n"
-#                 f"{install}"
-#             )
+    s = f"Ultralytics {__version__} 🚀 Python-{PYTHON_VERSION} torch-{torch.__version__} "
+    device = str(device).lower()
+    for remove in "cuda:", "none", "(", ")", "[", "]", "'", " ":
+        device = device.replace(remove, "")  # to string, 'cuda:0' -> '0' and '(0, 1)' -> '0,1'
+    cpu = device == "cpu"
+    mps = device in {"mps", "mps:0"}  # Apple Metal Performance Shaders (MPS)
+    if cpu or mps:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # force torch.cuda.is_available() = False
+    elif device:  # non-cpu device requested
+        if device == "cuda":
+            device = "0"
+        if "," in device:
+            device = ",".join([x for x in device.split(",") if x])  # remove sequential commas, i.e. "0,,1" -> "0,1"
+        visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+        os.environ["CUDA_VISIBLE_DEVICES"] = device  # set environment variable - must be before assert is_available()
+        if not (torch.cuda.is_available() and torch.cuda.device_count() >= len(device.split(","))):
+            LOGGER.info(s)
+            install = (
+                "See https://pytorch.org/get-started/locally/ for up-to-date torch install instructions if no "
+                "CUDA devices are seen by torch.\n"
+                if torch.cuda.device_count() == 0
+                else ""
+            )
+            raise ValueError(
+                f"Invalid CUDA 'device={device}' requested."
+                f" Use 'device=cpu' or pass valid CUDA device(s) if available,"
+                f" i.e. 'device=0' or 'device=0,1,2,3' for Multi-GPU.\n"
+                f"\ntorch.cuda.is_available(): {torch.cuda.is_available()}"
+                f"\ntorch.cuda.device_count(): {torch.cuda.device_count()}"
+                f"\nos.environ['CUDA_VISIBLE_DEVICES']: {visible}\n"
+                f"{install}"
+            )
 
-#     if not cpu and not mps and torch.cuda.is_available():  # prefer GPU if available
-#         devices = device.split(",") if device else "0"  # i.e. "0,1" -> ["0", "1"]
-#         n = len(devices)  # device count
-#         if n > 1:  # multi-GPU
-#             if batch < 1:
-#                 raise ValueError(
-#                     "AutoBatch with batch<1 not supported for Multi-GPU training, "
-#                     "please specify a valid batch size, i.e. batch=16."
-#                 )
-#             if batch >= 0 and batch % n != 0:  # check batch_size is divisible by device_count
-#                 raise ValueError(
-#                     f"'batch={batch}' must be a multiple of GPU count {n}. Try 'batch={batch // n * n}' or "
-#                     f"'batch={batch // n * n + n}', the nearest batch sizes evenly divisible by {n}."
-#                 )
-#         space = " " * (len(s) + 1)
-#         for i, d in enumerate(devices):
-#             s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"  # bytes to MB
-#         arg = "cuda:0"
-#     elif mps and TORCH_2_0 and torch.backends.mps.is_available():
-#         # Prefer MPS if available
-#         s += f"MPS ({get_cpu_info()})\n"
-#         arg = "mps"
-#     else:  # revert to CPU
-#         s += f"CPU ({get_cpu_info()})\n"
-#         arg = "cpu"
+    if not cpu and not mps and torch.cuda.is_available():  # prefer GPU if available
+        devices = device.split(",") if device else "0"  # i.e. "0,1" -> ["0", "1"]
+        n = len(devices)  # device count
+        if n > 1:  # multi-GPU
+            if batch < 1:
+                raise ValueError(
+                    "AutoBatch with batch<1 not supported for Multi-GPU training, "
+                    "please specify a valid batch size, i.e. batch=16."
+                )
+            if batch >= 0 and batch % n != 0:  # check batch_size is divisible by device_count
+                raise ValueError(
+                    f"'batch={batch}' must be a multiple of GPU count {n}. Try 'batch={batch // n * n}' or "
+                    f"'batch={batch // n * n + n}', the nearest batch sizes evenly divisible by {n}."
+                )
+        space = " " * (len(s) + 1)
+        for i, d in enumerate(devices):
+            s += f"{'' if i == 0 else space}CUDA:{d} ({get_gpu_info(i)})\n"  # bytes to MB
+        arg = "cuda:0"
+    elif mps and TORCH_2_0 and torch.backends.mps.is_available():
+        # Prefer MPS if available
+        s += f"MPS ({get_cpu_info()})\n"
+        arg = "mps"
+    else:  # revert to CPU
+        s += f"CPU ({get_cpu_info()})\n"
+        arg = "cpu"
 
-#     if arg in {"cpu", "mps"}:
-#         torch.set_num_threads(NUM_THREADS)  # reset OMP_NUM_THREADS for cpu training
-#     if verbose:
-#         LOGGER.info(s if newline else s.rstrip())
-#     return torch.device(arg)
+    if arg in {"cpu", "mps"}:
+        torch.set_num_threads(NUM_THREADS)  # reset OMP_NUM_THREADS for cpu training
+    if verbose:
+        LOGGER.info(s if newline else s.rstrip())
+    return torch.device(arg)
 
 
 def time_sync():
