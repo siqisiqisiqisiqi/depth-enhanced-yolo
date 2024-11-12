@@ -1,3 +1,5 @@
+import yaml
+
 from src.utils.model_load import ModelExt
 from src.models.model import PoseModel
 from src.train import PoseTrain
@@ -18,15 +20,20 @@ from src.train import PoseTrain
 # model.load(m.model)
 
 ############################## dataset construction ################################
-data_config = {'kpt_shape': [7, 3], 'nc': 1}
-
-############################## create model from the yaml file ################################
-m = ModelExt('./exp/model_config/yolo11-pose.yaml')
+with open("./dataset/green_onion_skeleton.yaml") as file:
+    data_config = yaml.safe_load(file)
+if data_config['depth']:
+    ch = 4
+else:
+    ch = 3
+nc = len(data_config['names'])
+######################### create model from the yaml file ###########################
+m = ModelExt('./exp/model_config/yolo11m-pose.yaml')
 model = PoseModel(
-    m, ch=3, nc=data_config["nc"], data_kpt_shape=data_config["kpt_shape"], verbose=True)
+    m, ch=ch, nc=nc, data_kpt_shape=data_config["kpt_shape"], verbose=True)
 
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data="./dataset/green_onion_skeleton.yaml", batch=8, epochs=200, imgsz=1080)
+    data="./dataset/green_onion_skeleton.yaml", batch=4, epochs=2, imgsz=1080)
 print("This is a test!")

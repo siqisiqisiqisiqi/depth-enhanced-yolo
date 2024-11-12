@@ -155,8 +155,12 @@ class BaseValidator:
             self.stride = model.stride  # used in get_dataloader() for padding
             self.dataloader = self.dataloader or self.get_dataloader(self.data.get(self.args.split), self.args.batch)
 
+            if self.data['depth']:
+                ch = 4
+            else:
+                ch = 3
             model.eval()
-            model.warmup(imgsz=(1 if pt else self.args.batch, 3, imgsz, imgsz))  # warmup
+            model.warmup(imgsz=(1 if pt else self.args.batch, ch, imgsz, imgsz))  # warmup
 
         self.run_callbacks("on_val_start")
         dt = (

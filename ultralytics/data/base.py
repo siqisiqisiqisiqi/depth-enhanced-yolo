@@ -61,6 +61,7 @@ class BaseDataset(Dataset):
         single_cls=False,
         classes=None,
         fraction=1.0,
+
     ):
         """Initialize BaseDataset with given configuration and options."""
         super().__init__()
@@ -89,6 +90,7 @@ class BaseDataset(Dataset):
         # Cache images (options are cache = True, False, None, "ram", "disk")
         self.ims, self.im_hw0, self.im_hw = [None] * self.ni, [None] * self.ni, [None] * self.ni
         self.npy_files = [Path(f).with_suffix(".npy") for f in self.im_files]
+        self.depth_files = [self.depth_path(f) for f in self.npy_files]
         self.cache = cache.lower() if isinstance(cache, str) else "ram" if cache is True else None
         if self.cache == "ram" and self.check_cache_ram():
             if hyp.deterministic:
@@ -102,6 +104,11 @@ class BaseDataset(Dataset):
 
         # Transforms
         self.transforms = self.build_transforms(hyp=hyp)
+
+    def depth_path(self, image_path):
+        parts = list(image_path.parts)
+        parts[6] = "depths"
+        return Path(*parts)
 
     def get_img_files(self, img_path):
         """Read image files."""
@@ -161,6 +168,11 @@ class BaseDataset(Dataset):
                     im = cv2.imread(f)  # BGR
             else:  # read image
                 im = cv2.imread(f)  # BGR
+                if self.data['depth']:
+                    depth = np.load(self.depth_files[i])
+                    depth = np.expand_dims(depth, axis=-1)
+                    depth = np.nan_to_num(depth, nan=-1)
+                    im = np.concatenate((im, depth), axis=-1)
             if im is None:
                 raise FileNotFoundError(f"Image Not Found {f}")
 
