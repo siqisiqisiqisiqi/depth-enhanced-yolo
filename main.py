@@ -28,5 +28,5 @@ model = PoseModel(
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data="./dataset/green_onion_skeleton.yaml", batch=4, epochs=20, imgsz=1080)
+    data="./dataset/green_onion_skeleton.yaml", batch=8, epochs=200, imgsz=1080)
 print("This is a test!")
