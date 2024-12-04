@@ -170,6 +170,7 @@ class BaseDataset(Dataset):
                 im = cv2.imread(f)  # BGR
                 if self.data['depth']:
                     depth = np.load(self.depth_files[i])
+                    depth = depth.astype(np.uint8)
                     depth = np.expand_dims(depth, axis=-1)
                     depth = np.nan_to_num(depth, nan=-1)
                     im = np.concatenate((im, depth), axis=-1)
@@ -297,6 +298,8 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, index):
         """Returns transformed label information for given index."""
+        # img_data = self.transforms(self.get_image_and_label(index))['img']
+        # np.save("wrong_img.npy", img_data)
         return self.transforms(self.get_image_and_label(index))
 
     def get_image_and_label(self, index):
@@ -307,9 +310,7 @@ class BaseDataset(Dataset):
         label["ratio_pad"] = (
             label["resized_shape"][0] / label["ori_shape"][0],
             label["resized_shape"][1] / label["ori_shape"][1],
-        )  # for evaluation
-        if self.rect:
-            label["rect_shape"] = self.batch_shapes[self.batch[index]]
+        )  # for evaluation self.batch_shapes[self.batch[index]]
         return self.update_labels_info(label)
 
     def __len__(self):

@@ -102,6 +102,7 @@ class BaseTrainer:
 
     def plot_training_samples(self, batch, ni):
         """Plot a batch of training samples with annotated class labels, bounding boxes, and keypoints."""
+        # images = batch["img"]
         images = batch["img"]
         kpts = batch["keypoints"]
         cls = batch["cls"].squeeze(-1)

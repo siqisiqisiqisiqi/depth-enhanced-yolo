@@ -20,8 +20,11 @@ from src.train import PoseTrain
 # model.load(m.model)
 
 ############################## dataset construction ################################
-with open("./dataset/green_onion_skeleton.yaml") as file:
+dataset_path = "./dataset/green_onion_skeleton_three_points.yaml"
+with open(dataset_path) as file:
     data_config = yaml.safe_load(file)
+# with open("./dataset/green_onion_skeleton.yaml") as file:
+#     data_config = yaml.safe_load(file)
 if data_config['depth']:
     ch = 4
 else:
@@ -35,5 +38,5 @@ model = PoseModel(
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data="./dataset/green_onion_skeleton.yaml", batch=4, epochs=2, imgsz=1080)
+    data=dataset_path, batch=4, epochs=1, imgsz=1080)
 print("This is a test!")

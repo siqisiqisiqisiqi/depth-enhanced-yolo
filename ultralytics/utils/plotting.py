@@ -1006,6 +1006,7 @@ def plot_images(
     """
     if isinstance(images, torch.Tensor):
         images = images.cpu().float().numpy()
+        images = images[:, -3:, :, :]
     if isinstance(cls, torch.Tensor):
         cls = cls.cpu().numpy()
     if isinstance(bboxes, torch.Tensor):

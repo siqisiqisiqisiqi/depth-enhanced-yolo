@@ -1,0 +1,31 @@
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: /home/grail/green_onion/datasets_new/green_onion_top_most  # dataset root dir
+train: images/train  # train images (relative to 'path') 4 images
+val: images/val  # val images (relative to 'path') 4 images
+test:  # test images (optional)
+
+# Keypoints
+# if visibility == 0 that keypoint not in the image.
+# if visibility == 1 that keypoint is in the image BUT not visible namely maybe behind of an object.
+# if visibility == 2 that keypoint looks clearly. not hidden.
+# keypoints: nose, eyes, ears, shoulders, elbows, wrists, hips, knees, and ankles
+kpt_shape: [3, 3]  # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)
+# Flip idx tutorial: https://github.com/ultralytics/ultralytics/issues/2052
+flip_idx: [0, 1, 2]
+
+# Classes dictionary
+names:
+  0: green onion
+
+depth: True
+
+# Hyperparameters ------------------------------------------------------------------------------------------------------
+translate: 0.2  # image translation (+/- fraction)
+scale: 0.2  # image scale (+/- gain)
+shear: 0.2  # image shear (+/- deg) from -0.5 to 0.5
+perspective: 0.1  # image perspective (+/- fraction), range 0-0.001
+flipud: 0.7  # image flip up-down (probability)
+fliplr: 0.5  # image flip left-right (probability)
+mosaic: 0.3  # image mosaic (probability)
+mixup: 0.1  # image mixup (probability)
+# copy_paste: 0.0  # segment copy-paste (probability)
