@@ -170,9 +170,10 @@ class BaseDataset(Dataset):
                 im = cv2.imread(f)  # BGR
                 if self.data['depth']:
                     depth = np.load(self.depth_files[i])
+                    depth = np.nan_to_num(depth, nan=0)
+                    depth = (depth - np.min(depth))/(np.max(depth)-np.min(depth))*255
                     depth = depth.astype(np.uint8)
                     depth = np.expand_dims(depth, axis=-1)
-                    depth = np.nan_to_num(depth, nan=-1)
                     im = np.concatenate((im, depth), axis=-1)
             if im is None:
                 raise FileNotFoundError(f"Image Not Found {f}")

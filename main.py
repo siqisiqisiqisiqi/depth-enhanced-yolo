@@ -30,6 +30,7 @@ if data_config['depth']:
 else:
     ch = 3
 nc = len(data_config['names'])
+
 ######################### create model from the yaml file ###########################
 m = ModelExt('./exp/model_config/yolo11m-pose.yaml')
 model = PoseModel(
@@ -38,5 +39,5 @@ model = PoseModel(
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data=dataset_path, batch=4, epochs=1, imgsz=1080)
+    data=dataset_path, batch=2, epochs=1, imgsz=1080)
 print("This is a test!")

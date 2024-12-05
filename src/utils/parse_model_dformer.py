@@ -53,6 +53,7 @@ from ultralytics.nn.modules import (
     WorldDetect,
     v10Detect,
 )
+from ultralytics.nn.modules.block_dformer import DFormer
 from ultralytics.utils import LOGGER, colorstr
 from ultralytics.utils.ops import make_divisible
 

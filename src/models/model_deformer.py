@@ -99,7 +99,13 @@ class BaseModel(nn.Module):
             (torch.Tensor): The last output of the model.
         """
         y, dt, embeddings = [], [], []  # outputs
+        x_e = x[:, 0, :, :].unsqueeze(1)
+        x_ = x[:, 1:, :, :]
         for m in self.model:
+            if y == []:
+                y = m(x_, x_e)
+                x = y[-1]
+                continue
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
