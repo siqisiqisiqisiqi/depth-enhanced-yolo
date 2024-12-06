@@ -85,7 +85,7 @@ from .transformer import (
     TransformerEncoderLayer,
     TransformerLayer,
 )
-
+from .block_dformer import DFormer
 __all__ = (
     "Conv",
     "Conv2",
@@ -156,4 +156,5 @@ __all__ = (
     "C2fCIB",
     "Attention",
     "PSA",
+    "DFormer",
 )

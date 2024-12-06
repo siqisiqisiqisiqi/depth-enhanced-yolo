@@ -39,5 +39,5 @@ model = PoseModel(
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data=dataset_path, batch=2, epochs=1, imgsz=1080)
+    data=dataset_path, batch=4, epochs=200, imgsz=640)
 print("This is a test!")

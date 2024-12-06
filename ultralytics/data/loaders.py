@@ -320,7 +320,7 @@ class LoadImagesAndVideos:
         - Can read from a text file containing paths to images and videos.
     """
 
-    def __init__(self, path, batch=1, vid_stride=1):
+    def __init__(self, path, batch=1, vid_stride=1, depth=False):
         """Initialize dataloader for images and videos, supporting various input formats."""
         parent = None
         if isinstance(path, str) and Path(path).suffix == ".txt":  # *.txt file with img/vid/dir on each line
@@ -357,6 +357,7 @@ class LoadImagesAndVideos:
         self.mode = "image"
         self.vid_stride = vid_stride  # video frame-rate stride
         self.bs = batch
+        self.depth = depth
         if any(videos):
             self._new_video(videos[0])  # new video
         else:
@@ -422,6 +423,14 @@ class LoadImagesAndVideos:
                         im0 = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)  # convert image to BGR nparray
                 else:
                     im0 = imread(path)  # BGR
+                    if self.depth:
+                        depth_path = path.replace("/images/", "/depths/").replace(".jpg", ".npy")
+                        depth = np.load(depth_path)
+                        depth = np.nan_to_num(depth, nan=0)
+                        depth = (depth - np.min(depth))/(np.max(depth)-np.min(depth))*255
+                        depth = depth.astype(np.uint8)
+                        depth = np.expand_dims(depth, axis=-1)
+                        im0 = np.concatenate((im0, depth), axis=-1)                        
                 if im0 is None:
                     LOGGER.warning(f"WARNING ⚠️ Image Read Error {path}")
                 else:

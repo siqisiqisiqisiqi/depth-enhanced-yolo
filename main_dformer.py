@@ -1,7 +1,7 @@
 import yaml
 
 from src.utils.model_load import ModelExt
-from src.models.model import PoseModel
+from src.models.model_deformer import PoseModel
 from src.train import PoseTrain
 
 
@@ -18,12 +18,12 @@ else:
 nc = len(data_config['names'])
 
 ######################### create model from the yaml file ###########################
-m = ModelExt('./exp/model_config/yolo11-pose-v2.yaml')
+m = ModelExt('./exp/model_config/yolo11m-pose-v2.yaml')
 model = PoseModel(
     m, ch=ch, nc=nc, data_kpt_shape=data_config["kpt_shape"], verbose=True)
 
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data=dataset_path, batch=2, epochs=1, imgsz=640)
+    data=dataset_path, batch=4, epochs=200, imgsz=640)
 print("This is a test!")

@@ -233,7 +233,7 @@ class DSL(nn.Module):
 
 # TODO: improve the code so that the stage is a module that can be used in the model architecture .yaml file
 class DFormer(BaseModule):
-    def __init__(self, depths=(3, 3, 5, 2), dims=(32, 64, 128, 256), out_indices=(0, 1, 2, 3), windows=[0, 7, 7, 7], norm_cfg=dict(type='SyncBN', requires_grad=True),
+    def __init__(self, dims=(64, 128, 256, 512), depths=(2, 2, 4, 2), out_indices=(0, 1, 2, 3), windows=[0, 7, 7, 7], norm_cfg=dict(type='SyncBN', requires_grad=True),
                  mlp_ratios=[8, 8, 4, 4], num_heads=(1, 2, 4, 8), last_block=[50, 50, 50, 50], drop_path_rate=0.1, init_cfg=None):
         super().__init__()
         self.depths = depths

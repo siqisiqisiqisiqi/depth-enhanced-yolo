@@ -197,11 +197,12 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
+        elif m is DFormer:
+            c2 = args[0]
         else:
             c2 = ch[f]
 
-        m_ = nn.Sequential(*(m(*args) for _ in range(n))
-                           ) if n > 1 else m(*args)  # module
+        m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
         t = str(m)[8:-2].replace("__main__.", "")  # module type
         m_.np = sum(x.numel() for x in m_.parameters())  # number params
         m_.i, m_.f, m_.type = i, f, t  # attach index, 'from' index, type
@@ -212,8 +213,10 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             f, int) else f) if x != -1)  # append to savelist
         layers.append(m_)
         if i == 0:
-            ch = []
-        ch.append(c2)
+            # ch = []
+            ch = c2
+        else:
+            ch.append(c2)
     return nn.Sequential(*layers), sorted(save)
 
 

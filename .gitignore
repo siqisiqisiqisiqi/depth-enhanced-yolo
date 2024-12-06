@@ -1,3 +1,4 @@
 exp/runs/
 exp/checkpoints/
 test/
+weights/
