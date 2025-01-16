@@ -402,6 +402,7 @@ class DeformableTransformerDecoder(nn.Module):
         output = embed
         dec_bboxes = []
         dec_cls = []
+        outputs = []
         last_refined_bbox = None
         refer_bbox = refer_bbox.sigmoid()
         for i, layer in enumerate(self.layers):
@@ -412,6 +413,7 @@ class DeformableTransformerDecoder(nn.Module):
 
             if self.training:
                 dec_cls.append(score_head[i](output))
+                outputs.append(output)
                 if i == 0:
                     dec_bboxes.append(refined_bbox)
                 else:
@@ -419,9 +421,10 @@ class DeformableTransformerDecoder(nn.Module):
             elif i == self.eval_idx:
                 dec_cls.append(score_head[i](output))
                 dec_bboxes.append(refined_bbox)
+                outputs.append(output)
                 break
 
             last_refined_bbox = refined_bbox
             refer_bbox = refined_bbox.detach() if self.training else refined_bbox
 
-        return torch.stack(dec_bboxes), torch.stack(dec_cls)
+        return torch.stack(dec_bboxes), torch.stack(dec_cls), torch.stack(outputs)

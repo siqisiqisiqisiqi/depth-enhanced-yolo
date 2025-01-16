@@ -1,5 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -31,7 +32,7 @@ class HungarianMatcher(nn.Module):
         _cost_mask(bs, num_gts, masks=None, gt_mask=None): Computes the mask cost and dice cost if masks are predicted.
     """
 
-    def __init__(self, cost_gain=None, use_fl=True, with_mask=False, num_sample_points=12544, alpha=0.25, gamma=2.0):
+    def __init__(self, cost_gain=None, use_fl=True, with_kpts=False, with_mask=False, num_sample_points=12544, alpha=0.25, gamma=2.0):
         """Initializes a HungarianMatcher module for optimal assignment of predicted and ground truth bounding boxes."""
         super().__init__()
         if cost_gain is None:
@@ -39,11 +40,16 @@ class HungarianMatcher(nn.Module):
         self.cost_gain = cost_gain
         self.use_fl = use_fl
         self.with_mask = with_mask
+        self.with_kpts = with_kpts
         self.num_sample_points = num_sample_points
         self.alpha = alpha
         self.gamma = gamma
+        if with_kpts:
+            self.sigmas = np.array([2.0, 0.5, 0.5], dtype=np.float32) / 3.0 
+            #TODO: change the gain of the this according to other cost
+            self.cost_gain.update({"kpts": 2.0, "oks": 0.02})          
 
-    def forward(self, pred_bboxes, pred_scores, gt_bboxes, gt_cls, gt_groups, masks=None, gt_mask=None):
+    def forward(self, pred_bboxes, pred_scores, gt_bboxes, gt_cls, gt_groups, pred_kpts=None, gt_kpts=None, masks=None, gt_mask=None):
         """
         Forward pass for HungarianMatcher. This function computes costs based on prediction and ground truth
         (classification cost, L1 cost between boxes and GIoU cost between boxes) and finds the optimal matching between
@@ -56,10 +62,13 @@ class HungarianMatcher(nn.Module):
             gt_bboxes (torch.Tensor): Ground truth bounding boxes with shape [num_gts, 4].
             gt_groups (List[int]): List of length equal to batch size, containing the number of ground truths for
                 each image.
+            kpts (Tensor, optional): Predicted keypoints with shape [batch_size, num_queries, keypoints_number*3].
+                Defaults to None.
             masks (Tensor, optional): Predicted masks with shape [batch_size, num_queries, height, width].
                 Defaults to None.
             gt_mask (List[Tensor], optional): List of ground truth masks, each with shape [num_masks, Height, Width].
                 Defaults to None.
+            gt_kpts (torch.Tensor): Ground truth keypoints with shape [num_gts, keypoints_number*3].
 
         Returns:
             (List[Tuple[Tensor, Tensor]]): A list of size batch_size, each element is a tuple (index_i, index_j), where:
@@ -105,10 +114,13 @@ class HungarianMatcher(nn.Module):
         if self.with_mask:
             C += self._cost_mask(bs, gt_groups, masks, gt_mask)
 
+        if self.with_kpts:
+            C += self._cost_kpts(bs, gt_groups, pred_kpts, gt_kpts)
+
         # Set invalid values (NaNs and infinities) to 0 (fixes ValueError: matrix contains invalid numeric entries)
         C[C.isnan() | C.isinf()] = 0.0
 
-        C = C.view(bs, nq, -1).cpu()
+        C = C.view(bs, nq, -1).cpu().detach()
         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(gt_groups, -1))]
         gt_groups = torch.as_tensor([0, *gt_groups[:-1]]).cumsum_(0)  # (idx for queries, idx for gt)
         return [
@@ -116,6 +128,42 @@ class HungarianMatcher(nn.Module):
             for k, (i, j) in enumerate(indices)
         ]
 
+    # This function is for RT-DETR Keypoint models
+    def _cost_kpts(self, bs, num_gts, kpts=None, gt_kpts=None):
+        kpts = kpts.reshape(-1, kpts.shape[-1])
+        #TODO: Right now the dataloader doesn't have the area value
+        tgt_area = torch.full([gt_kpts.shape[0]], 0.3).cuda()
+
+        Z_pred_x = kpts[:, 0::3]
+        Z_pred_y = kpts[:, 1::3]
+        V_pred = kpts[:, 2::3]
+        Z_pred = torch.cat((Z_pred_x.unsqueeze(-1), Z_pred_y.unsqueeze(-1)), dim=-1).flatten(start_dim=1)
+
+        Z_gt_x = gt_kpts[:, 0::3]
+        Z_gt_y = gt_kpts[:, 1::3]
+        V_gt = gt_kpts[:, 2::3]
+        Z_gt = torch.cat((Z_gt_x.unsqueeze(-1), Z_gt_y.unsqueeze(-1)), dim=-1).flatten(start_dim=1)
+        if Z_pred.sum() > 0:
+            sigmas = Z_pred.new_tensor(self.sigmas)
+            variances = (sigmas * 2) ** 2
+            kpt_preds = Z_pred.reshape(-1, Z_pred.size(-1) // 2, 2)
+            kpt_gts = Z_gt.reshape(-1, Z_gt.size(-1) // 2, 2)
+            squared_distance = (kpt_preds[:, None, :, 0] - kpt_gts[None, :, :, 0]) ** 2 + \
+                               (kpt_preds[:, None, :, 1] - kpt_gts[None, :, :, 1]) ** 2
+            squared_distance0 = squared_distance / (tgt_area[:, None] * variances[None, :] * 2)
+            squared_distance1 = torch.exp(-squared_distance0)
+            squared_distance1 = squared_distance1 * V_gt
+            oks = squared_distance1.sum(dim=-1) / (V_gt.sum(dim=-1) + 1e-6)
+            oks = oks.clamp(min=1e-6)
+            cost_oks = 1 - oks
+            cost_keypoints = torch.abs(Z_pred[:, None, :] - Z_gt[None])
+            cost_keypoints = cost_keypoints * V_gt.repeat_interleave(2, dim=1)[None]
+            cost_keypoints = cost_keypoints.sum(-1)
+            C = self.cost_gain["kpts"] * cost_keypoints + self.cost_gain["oks"] * cost_oks
+        else:
+            C = torch.zeros((kpts.shape[0], gt_kpts.shape[0])).cuda()
+        return C
+    
     # This function is for future RT-DETR Segment models
     # def _cost_mask(self, bs, num_gts, masks=None, gt_mask=None):
     #     assert masks is not None and gt_mask is not None, 'Make sure the input has `mask` and `gt_mask`'

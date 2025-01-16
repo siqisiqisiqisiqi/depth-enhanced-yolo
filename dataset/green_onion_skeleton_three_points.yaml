@@ -17,7 +17,7 @@ flip_idx: [0, 1, 2]
 names:
   0: green onion
 
-depth: True
+depth: False
 
 # Hyperparameters ------------------------------------------------------------------------------------------------------
 translate: 0.2  # image translation (+/- fraction)

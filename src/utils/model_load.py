@@ -9,7 +9,7 @@ from ultralytics.utils import (
 # Model information extraction
 # class CustomModel(nn.Module):
 class ModelExt():
-    def __init__(self, model, task: str = None, verbose: bool = False):
+    def __init__(self, model, task: str = "detect", verbose: bool = False):
         self.overrides = {}
         if Path(model).suffix in {".yaml", ".yml"}:
             self._new(model, task=task, verbose=verbose)
@@ -45,7 +45,7 @@ class ModelExt():
         Load the model parameter from the yaml
         """
         cfg_dict = yaml_model_load(cfg)
-        self.task = task or guess_model_task(cfg_dict)
+        self.task = guess_model_task(cfg_dict) or task
         self.cfg = cfg_dict
         self.overrides["model"] = cfg
         self.overrides["task"] = self.task

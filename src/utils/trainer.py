@@ -49,6 +49,7 @@ class Trainer(BaseTrainer):
         self.plots = {}
         self.model = model
         self.start_epoch = 0
+        self.task = model.task
         self.device = torch.device("cuda")
         self.args = get_cfg(cfg, overrides)
         self.batch_size = self.args.batch
@@ -145,19 +146,19 @@ class Trainer(BaseTrainer):
         self.set_model_attributes()
 
         # Freeze layers
-        freeze_layer_names = ['.dfl']
-        for k, v in self.model.named_parameters():
-            # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
-            if any(x in k for x in freeze_layer_names):
-                LOGGER.info(f"Freezing layer '{k}'")
-                v.requires_grad = False
-            # only floating point Tensor can require gradients
-            elif not v.requires_grad and v.dtype.is_floating_point:
-                LOGGER.info(
-                    f"WARNING ⚠️ setting 'requires_grad=True' for frozen layer '{k}'. "
-                    "See ultralytics.engine.trainer for customization of frozen layers."
-                )
-                v.requires_grad = True
+        # freeze_layer_names = ['.dfl']
+        # for k, v in self.model.named_parameters():
+        #     # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
+        #     if any(x in k for x in freeze_layer_names):
+        #         LOGGER.info(f"Freezing layer '{k}'")
+        #         v.requires_grad = False
+        #     # only floating point Tensor can require gradients
+        #     elif not v.requires_grad and v.dtype.is_floating_point:
+        #         LOGGER.info(
+        #             f"WARNING ⚠️ setting 'requires_grad=True' for frozen layer '{k}'. "
+        #             "See ultralytics.engine.trainer for customization of frozen layers."
+        #         )
+        #         v.requires_grad = True
 
         # Check AMP
         # TODO: debug this part

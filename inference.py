@@ -7,7 +7,6 @@ from src.utils.model_load import ModelExt
 from src.predict import PosePredict
 
 image_path_list = glob("./test/test_data/images/*")
-# image_path = "./test/test_data/images/Image_1.jpg"
 model = "3"
 
 
@@ -24,7 +23,7 @@ def visualization(image_path, results):
             cv2.circle(img, point, 3, colors[i], -1)
             # cv2.putText(img, str(i + 1), (point[0] + 10, point[1]),
             #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, colors[i], 2)
-            if i < 2:
+            if i < keypoint.shape[0]-1:
                 cv2.line(img, keypoint[i][:2], keypoint[i + 1]
                          [:2], colors[5], thickness=2)
         # keypoint = keypoint[keypoint[:, -1] != 0]
@@ -59,6 +58,7 @@ for image_path in image_path_list:
     #     im_array = r.plot()
     #     cv2.imshow("image", im_array)
     #     cv2.waitKey(0)
+
     k = visualization(image_path, results)
     if k == ord("q"):
         break

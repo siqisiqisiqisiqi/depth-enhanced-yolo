@@ -25,5 +25,5 @@ model = PoseModel(
 ############################## train the model ################################
 trainer = PoseTrain(model)
 results = trainer.train(
-    data=dataset_path, batch=4, epochs=200, imgsz=640)
+    data=dataset_path, batch=4, epochs=400, imgsz=640)
 print("This is a test!")

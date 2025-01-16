@@ -15,7 +15,7 @@ from .conv import Conv, DWConv
 from .transformer import MLP, DeformableTransformerDecoder, DeformableTransformerDecoderLayer
 from .utils import bias_init_with_prob, linear_init
 
-__all__ = "Detect", "Segment", "Pose", "Classify", "OBB", "RTDETRDecoder", "v10Detect"
+__all__ = "Detect", "Segment", "Pose", "Classify", "OBB", "RTDETRDecoder", "RTDETRPoseDecoder", "v10Detect"
 
 
 class Detect(nn.Module):
@@ -371,6 +371,7 @@ class RTDETRDecoder(nn.Module):
         dropout=0.0,
         act=nn.ReLU(),
         eval_idx=-1,
+        kpt_shape=None,
         # Training args
         nd=100,  # num denoising
         label_noise_ratio=0.5,
@@ -431,13 +432,18 @@ class RTDETRDecoder(nn.Module):
         self.enc_score_head = nn.Linear(hd, nc)
         self.enc_bbox_head = MLP(hd, hd, 4, num_layers=3)
 
+        # keypoint encoder head
+        if kpt_shape is not None:
+            self.kpt_shape = kpt_shape
+            self.enc_kpts_head = MLP(hd, hd, kpt_shape[0]*kpt_shape[1], num_layers=3)
+
         # Decoder head
         self.dec_score_head = nn.ModuleList([nn.Linear(hd, nc) for _ in range(ndl)])
         self.dec_bbox_head = nn.ModuleList([MLP(hd, hd, 4, num_layers=3) for _ in range(ndl)])
 
         self._reset_parameters()
 
-    def forward(self, x, batch=None):
+    def forward(self, x, batch=None, kpts=False):
         """Runs the forward pass of the module, returning bounding box and classification scores for the input."""
         from ultralytics.models.utils.ops import get_cdn_group
 
@@ -455,11 +461,15 @@ class RTDETRDecoder(nn.Module):
             self.box_noise_scale,
             self.training,
         )
-
-        embed, refer_bbox, enc_bboxes, enc_scores = self._get_decoder_input(feats, shapes, dn_embed, dn_bbox)
+        if kpts:
+            embed, refer_bbox, enc_bboxes, enc_scores, enc_kpts = \
+                self._get_decoder_input(feats, shapes, dn_embed, dn_bbox, kpts)
+        else: 
+            embed, refer_bbox, enc_bboxes, enc_scores = \
+                self._get_decoder_input(feats, shapes, dn_embed, dn_bbox, kpts)
 
         # Decoder
-        dec_bboxes, dec_scores = self.decoder(
+        dec_bboxes, dec_scores, output = self.decoder(
             embed,
             refer_bbox,
             feats,
@@ -469,7 +479,10 @@ class RTDETRDecoder(nn.Module):
             self.query_pos_head,
             attn_mask=attn_mask,
         )
-        x = dec_bboxes, dec_scores, enc_bboxes, enc_scores, dn_meta
+        if kpts:
+            x = dec_bboxes, dec_scores, enc_bboxes, enc_scores, enc_kpts, dn_meta, output
+        else:
+            x = dec_bboxes, dec_scores, enc_bboxes, enc_scores, dn_meta
         if self.training:
             return x
         # (bs, 300, 4+nc)
@@ -514,7 +527,7 @@ class RTDETRDecoder(nn.Module):
         feats = torch.cat(feats, 1)
         return feats, shapes
 
-    def _get_decoder_input(self, feats, shapes, dn_embed=None, dn_bbox=None):
+    def _get_decoder_input(self, feats, shapes, dn_embed=None, dn_bbox=None, kpts=False):
         """Generates and prepares the input required for the decoder from the provided features and shapes."""
         bs = feats.shape[0]
         # Prepare input for decoder
@@ -536,8 +549,17 @@ class RTDETRDecoder(nn.Module):
 
         # Dynamic anchors + static content
         refer_bbox = self.enc_bbox_head(top_k_features) + top_k_anchors
-
         enc_bboxes = refer_bbox.sigmoid()
+
+        if kpts:
+            ndim = self.kpt_shape[1]
+            refer_kpts = self.enc_kpts_head(top_k_features)
+            refer_kpts[...,0::ndim] = refer_kpts[...,0::ndim] + \
+                top_k_anchors[...,0].unsqueeze(-1).repeat(1,1,ndim)
+            refer_kpts[...,1::ndim] = refer_kpts[...,1::ndim] + \
+                top_k_anchors[...,1].unsqueeze(-1).repeat(1,1,ndim)
+            enc_kpts = refer_kpts.sigmoid()
+        
         if dn_bbox is not None:
             refer_bbox = torch.cat([dn_bbox, refer_bbox], 1)
         enc_scores = enc_outputs_scores[batch_ind, topk_ind].view(bs, self.num_queries, -1)
@@ -550,9 +572,12 @@ class RTDETRDecoder(nn.Module):
         if dn_embed is not None:
             embeddings = torch.cat([dn_embed, embeddings], 1)
 
-        return embeddings, refer_bbox, enc_bboxes, enc_scores
+        if kpts:
+            return embeddings, refer_bbox, enc_bboxes, enc_scores, enc_kpts
+        else: 
+            return embeddings, refer_bbox, enc_bboxes, enc_scores
 
-    # TODO
+
     def _reset_parameters(self):
         """Initializes or resets the parameters of the model's various components with predefined weights and biases."""
         # Class and bbox head init
@@ -577,7 +602,36 @@ class RTDETRDecoder(nn.Module):
         for layer in self.input_proj:
             xavier_uniform_(layer[0].weight)
 
+class RTDETRPoseDecoder(RTDETRDecoder):
+    """YOLO Pose head for keypoints models."""
 
+    def __init__(self, nc=80, ch=(), kpt_shape=(17, 3)):
+        """Initialize YOLO network with default parameters and Convolutional Layers."""
+        super().__init__(nc, ch, kpt_shape=kpt_shape)
+        self.kpt_shape = kpt_shape  # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)
+        self.nk = kpt_shape[0] * kpt_shape[1]  # number of keypoints total
+
+        # Decoder keypoints head
+        # self.dec_score_kpts = nn.ModuleList([nn.Linear(self.hidden_dim, nc) for _ in range(self.num_decoder_layers)])
+        self.dec_bbox_kpts = nn.ModuleList([MLP(self.hidden_dim, self.hidden_dim, self.nk, num_layers=3) for _ in range(self.num_decoder_layers)])
+
+    def forward(self, x, batch=None):
+        """Perform forward pass through YOLO model and return predictions."""
+        bs = x[0].shape[0]  # batch size
+        x = RTDETRDecoder.forward(self, x, batch, True)
+        if self.training:
+            outputs = x[-1]
+            kpt = torch.stack([self.dec_bbox_kpts[i](outputs[i]) for i in range(self.num_decoder_layers)], 0)  # (6, bs, num_points, self.nk)
+            # return x, kpt
+            return x, kpt
+        else:
+            y, x_ = x
+            output = x_[-1]
+            kpt = self.dec_bbox_kpts[-1](output)
+            y = torch.cat((y, kpt.squeeze(0)), -1)
+            return (y, x_), kpt
+
+        
 class v10Detect(Detect):
     """
     v10 Detection head from https://arxiv.org/pdf/2405.14458.

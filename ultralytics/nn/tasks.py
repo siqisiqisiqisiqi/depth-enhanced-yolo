@@ -1136,7 +1136,7 @@ def guess_model_task(model):
             return "detect"
         if m == "segment":
             return "segment"
-        if m == "pose":
+        if m  in ["pose", "rtdetrposedecoder"]:
             return "pose"
         if m == "obb":
             return "obb"
