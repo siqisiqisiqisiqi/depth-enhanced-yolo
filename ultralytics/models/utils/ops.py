@@ -47,7 +47,7 @@ class HungarianMatcher(nn.Module):
         if with_kpts:
             self.sigmas = np.array([2.0, 0.5, 0.5], dtype=np.float32) / 3.0 
             #TODO: change the gain of the this according to other cost
-            self.cost_gain.update({"kpts": 2.0, "oks": 0.02})          
+            self.cost_gain.update({"kpts": 0.2, "oks": 1})          
 
     def forward(self, pred_bboxes, pred_scores, gt_bboxes, gt_cls, gt_groups, pred_kpts=None, gt_kpts=None, masks=None, gt_mask=None):
         """

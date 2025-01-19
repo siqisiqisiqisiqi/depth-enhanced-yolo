@@ -1,4 +1,5 @@
 exp/runs/
 exp/checkpoints/
+exp/model_weights/
 test/
 weights/

@@ -507,19 +507,10 @@ class RTDETRDetectionModel(DetectionModel):
         return x
 
 
-# TODO: learn the pose loss and change it
 class RTDETRPoseModel(RTDETRDetectionModel):
-    def __init__(self, m, ch=3, nc=None, data_kpt_shape=(None, None), verbose=True):
-        cfg = m.cfg
+    def __init__(self, m, ch=3, nc=None, verbose=True):
         self.overrides = m.overrides
         self.task = m.task
-        """Initialize YOLOv8 Pose model."""
-        if not isinstance(cfg, dict):
-            cfg = yaml_model_load(cfg)  # load model YAML
-        if any(data_kpt_shape) and list(data_kpt_shape) != list(cfg["kpt_shape"]):
-            LOGGER.info(
-                f"Overriding model.yaml kpt_shape={cfg['kpt_shape']} with kpt_shape={data_kpt_shape}")
-            cfg["kpt_shape"] = data_kpt_shape
         super().__init__(m=m, ch=ch, nc=nc, verbose=verbose)
 
     def init_criterion(self):
@@ -566,11 +557,9 @@ class RTDETRPoseModel(RTDETRDetectionModel):
             dn_scores, dec_scores = torch.split(
                 dec_scores, dn_meta["dn_num_split"], dim=2)
             dn_kpts, dec_kpts = torch.split(
-                dec_kpts, dn_meta["dn_num_split"], dim=2
-            )
+                dec_kpts, dn_meta["dn_num_split"], dim=2)
 
-        dec_bboxes = torch.cat(
-            [enc_bboxes.unsqueeze(0), dec_bboxes])  # (7, bs, 300, 4)
+        dec_bboxes = torch.cat([enc_bboxes.unsqueeze(0), dec_bboxes])  # (7, bs, 300, 4)
         dec_scores = torch.cat([enc_scores.unsqueeze(0), dec_scores])
         dec_kpts = torch.cat([enc_kpts.unsqueeze(0), dec_kpts])
 
