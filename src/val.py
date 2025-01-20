@@ -118,7 +118,8 @@ class RTDETRPoseValidator(PoseValidator):
         nk = self.kpt_shape[0] * self.kpt_shape[1]
         bboxes, scores, keypoints = preds[0][0].split((4, self.nc, nk), dim=-1)
         bboxes *= self.args.imgsz
-        keypoints *= self.args.imgsz
+        keypoints[..., 0::3] *= self.args.imgsz
+        keypoints[..., 1::3] *= self.args.imgsz
         
         outputs = [torch.zeros((0, 6 + nk), device=bboxes.device)] * bs
         for i, bbox in enumerate(bboxes):  # (300, 4)

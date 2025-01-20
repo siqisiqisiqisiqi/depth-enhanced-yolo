@@ -161,7 +161,6 @@ class Trainer(BaseTrainer):
         #         v.requires_grad = True
 
         # Check AMP
-        # TODO: debug this part
         # self.amp = torch.tensor(self.args.amp).to(self.device)  # True or False
         # if self.amp and RANK in {-1, 0}:  # Single-GPU and DDP
         #     self.amp = torch.tensor(check_amp(self.model), device=self.device)

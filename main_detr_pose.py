@@ -18,7 +18,9 @@ nc = len(data_config['names'])
 
 ######################### create model from the yaml file ###########################
 m = ModelExt('./exp/model_config/rtdetr-l-pose.yaml')
+
 m2 = ModelExt('./exp/model_weights/rtdetr-l-green_onion.pt')
+# m2 = ModelExt('./weights/rgb_detr.pt')
 model = RTDETRPoseModel(m, ch=ch, nc=nc, verbose=True)
 model = weight_transfer(model, m2.model)
 del m2
@@ -26,4 +28,4 @@ del m2
 ############################## train the model ################################
 trainer = RTDETRTrain(model)
 results = trainer.train(
-    data=dataset_path, batch=4, epochs=200, imgsz=640)
+    data=dataset_path, batch=4, epochs=400, imgsz=640)

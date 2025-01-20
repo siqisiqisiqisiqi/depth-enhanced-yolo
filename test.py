@@ -5,7 +5,7 @@ from glob import glob
 
 from src.utils.color import colors
 from src.utils.model_load import ModelExt
-from src.predict import PosePredict
+from src.predict import PoseRTDETRPredict
 
 image_path_list = glob("./test/test_data/images/*")
 
@@ -37,16 +37,19 @@ for image_path in image_path_list:
 
     ############################## rgb inference ################################
     m = ModelExt('./weights/rgb_detr.pt')
-    predictor = PosePredict(m)
+    predictor = PoseRTDETRPredict(m)
     results = predictor.predict(image_path)
 
     ############################## visualization ################################
-    # for r in results:
-    #     im_array = r.plot()
-    #     cv2.imshow("image", im_array)
-    #     cv2.waitKey(0)
-
-    k = visualization(image_path, results)
+    for r in results:
+        im_array = r.plot()
+        cv2.imshow("image", im_array)
+        k = cv2.waitKey(0)
     if k == ord("q"):
         break
+
+    # k = visualization(image_path, results)
+    # if k == ord("q"):
+    #     break
+
 cv2.destroyAllWindows()

@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import torch
 from PIL import Image
-from src.utils.predicter import PosePredictor
+from src.utils.predicter import PosePredictor, PoseRTDETRPredictor
 from ultralytics.engine.results import Results
 from ultralytics.cfg import TASK2DATA, get_cfg, get_save_dir
 from ultralytics.utils import (
@@ -50,7 +50,8 @@ class PosePredict():
             x in ARGV for x in ("predict", "track", "mode=predict", "mode=track")
         )
 
-        custom = {"conf": 0.25, "batch": 1, "save": is_cli, "mode": "predict"}  # method defaults
+        custom = {"conf": 0.25, "batch": 1, "save": is_cli,
+                  "mode": "predict"}  # method defaults
         # highest priority args on the right
         args = {**self.overrides, **custom, **kwargs}
         prompts = args.pop("prompts", None)  # for SAM-type models
@@ -66,3 +67,16 @@ class PosePredict():
         if prompts and hasattr(self.predictor, "set_prompts"):  # for SAM-type models
             self.predictor.set_prompts(prompts)
         return self.predictor.predict_cli(source=source) if is_cli else self.predictor(source=source, stream=stream)
+
+
+class PoseRTDETRPredict(PosePredict):
+    def _smart_load(self):
+        try:
+            return PoseRTDETRPredictor
+        except Exception as e:
+            name = self.__class__.__name__
+            mode = inspect.stack()[1][3]  # get the function name.
+            raise NotImplementedError(
+                emojis(
+                    f"WARNING ⚠️ '{name}' model does not support '{mode}' mode for '{self.task}' task yet.")
+            ) from e

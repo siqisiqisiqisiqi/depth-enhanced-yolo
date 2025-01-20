@@ -10,3 +10,4 @@ This is the repo that change the Yolo model so that it can have better performan
 - train 8 dformer rgbd resolution 640 small model epoch 400 improved dataset
 - train 9 rgbd concatenate resolution 640 epoch 400 improved dataset
 - train 10 rgb resolution 640 epoch 400 improved dataset
+- train 14 rgb-detr resolution 640 epoch 400 improved dataset (need debug)

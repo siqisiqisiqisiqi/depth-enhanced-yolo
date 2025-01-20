@@ -52,17 +52,19 @@ class DETRLoss(nn.Module):
 
         if loss_gain is None:
             loss_gain = {"class": 1, "bbox": 5, "giou": 2, "no_object": 0.1,
-                         "mask": 1, "dice": 1, "kpts": 1, "oks": 4}
+                         "mask": 1, "dice": 1, "kpts": 1, "oks": 4, "kobj": 2}
         self.nc = nc
         self.matcher = HungarianMatcher(
             cost_gain={"class": 2, "bbox": 5, "giou": 2}, with_kpts=with_kpts)
         self.loss_gain = loss_gain
         self.aux_loss = aux_loss
-        self.oks = OKSLoss(linear=True,
-                           num_keypoints=3,
-                           eps=1e-6,
-                           reduction='mean',
-                           loss_weight=1.0)
+        if with_kpts:
+            self.oks = OKSLoss(linear=True,
+                            num_keypoints=3,
+                            eps=1e-6,
+                            reduction='mean',
+                            loss_weight=1.0)
+            self.bce_pose = nn.BCEWithLogitsLoss()
         self.fl = FocalLoss() if use_fl else None
         self.vfl = VarifocalLoss() if use_vfl else None
 
@@ -114,7 +116,7 @@ class DETRLoss(nn.Module):
         loss[name_giou] = self.loss_gain["giou"] * loss[name_giou]
         return {k: v.squeeze() for k, v in loss.items()}
 
-    def _get_loss_kpts(self, pred_kpts, gt_kpts, postfix=""):
+    def _get_loss_kpts(self, pred_kpts, gt_kpts, tgt_area, postfix=""):
         """Computes bounding box and GIoU losses for predicted and ground truth bounding boxes."""
         # Boxes: [b, query, 4], gt_bbox: list[[n, 4]]
         name_kpts = f"loss_kpts{postfix}"
@@ -127,7 +129,7 @@ class DETRLoss(nn.Module):
             return loss
 
         # TODO: Right now the dataloader doesn't have the area value
-        tgt_area = torch.full((gt_kpts.shape[0],), 0.3).cuda()
+        # tgt_area = torch.full((gt_kpts.shape[0],), 0.3).cuda()
         Z_pred_x = pred_kpts[:, 0::3]
         Z_pred_y = pred_kpts[:, 1::3]
         V_pred = pred_kpts[:, 2::3]
@@ -142,8 +144,10 @@ class DETRLoss(nn.Module):
 
         pose_loss = F.l1_loss(Z_pred, Z_gt, reduction='none')
         pose_loss = pose_loss * V_gt.repeat_interleave(2, dim=1)
+
+        kpts_obj_loss = self.loss_gain['kobj'] * self.bce_pose(V_pred, V_gt/2)
         loss[name_kpts] = self.loss_gain['kpts'] * pose_loss.sum() / \
-            len(gt_kpts)
+            len(gt_kpts) + kpts_obj_loss
 
         oks_loss = self.oks(Z_pred, Z_gt, V_gt, tgt_area,
                             weight=None, avg_factor=None, reduction_override=None)
@@ -272,6 +276,7 @@ class DETRLoss(nn.Module):
         pred_bboxes, gt_bboxes = pred_bboxes[idx], gt_bboxes[gt_idx]
         if gt_kpts is not None and pred_kpts is not None:
             pred_kpts, gt_kpts = pred_kpts[idx], gt_kpts[gt_idx]
+            tgt_area = gt_bboxes[:, 2:].prod(1)
 
         bs, nq = pred_scores.shape[:2]
         targets = torch.full(
@@ -289,7 +294,7 @@ class DETRLoss(nn.Module):
         loss.update(self._get_loss_bbox(pred_bboxes, gt_bboxes, postfix))
 
         if pred_kpts is not None and gt_kpts is not None:
-            loss.update(self._get_loss_kpts(pred_kpts, gt_kpts, postfix))
+            loss.update(self._get_loss_kpts(pred_kpts, gt_kpts, tgt_area, postfix))
         return loss
 
     @staticmethod
@@ -425,7 +430,6 @@ class RTDETRDetectionLoss(DETRLoss):
         return total_loss
 
 
-# TODO: Right now it is just the framework, needs to debug
 class RTDETRPoseLoss(DETRLoss):
     def forward(self, preds, batch, dn_bboxes=None, dn_scores=None, dn_kpts=None, dn_meta=None):
         """
