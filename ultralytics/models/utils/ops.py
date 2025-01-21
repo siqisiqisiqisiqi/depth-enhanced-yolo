@@ -46,7 +46,6 @@ class HungarianMatcher(nn.Module):
         self.gamma = gamma
         if with_kpts:
             self.sigmas = np.array([2.0, 0.5, 0.5], dtype=np.float32) / 3.0 
-            #TODO: change the gain of the this according to other cost
             self.cost_gain.update({"kpts": 0.2, "oks": 1})          
 
     def forward(self, pred_bboxes, pred_scores, gt_bboxes, gt_cls, gt_groups, pred_kpts=None, gt_kpts=None, masks=None, gt_mask=None):
@@ -98,6 +97,9 @@ class HungarianMatcher(nn.Module):
         else:
             cost_class = -pred_scores
 
+        # Compute the target area of the bbox 
+        tgt_area = gt_bboxes[:, 2:].prod(1)
+
         # Compute the L1 cost between boxes
         cost_bbox = (pred_bboxes.unsqueeze(1) - gt_bboxes.unsqueeze(0)).abs().sum(-1)  # (bs*num_queries, num_gt)
 
@@ -115,7 +117,7 @@ class HungarianMatcher(nn.Module):
             C += self._cost_mask(bs, gt_groups, masks, gt_mask)
 
         if self.with_kpts:
-            C += self._cost_kpts(bs, gt_groups, pred_kpts, gt_kpts)
+            C += self._cost_kpts(bs, gt_groups, pred_kpts, gt_kpts, tgt_area)
 
         # Set invalid values (NaNs and infinities) to 0 (fixes ValueError: matrix contains invalid numeric entries)
         C[C.isnan() | C.isinf()] = 0.0
@@ -129,10 +131,9 @@ class HungarianMatcher(nn.Module):
         ]
 
     # This function is for RT-DETR Keypoint models
-    def _cost_kpts(self, bs, num_gts, kpts=None, gt_kpts=None):
+    def _cost_kpts(self, bs, num_gts, kpts=None, gt_kpts=None, tgt_area=None):
         kpts = kpts.reshape(-1, kpts.shape[-1])
-        #TODO: Right now the dataloader doesn't have the area value
-        tgt_area = torch.full([gt_kpts.shape[0]], 0.3).cuda()
+        # tgt_area = torch.full([gt_kpts.shape[0]], 0.3).cuda()
 
         Z_pred_x = kpts[:, 0::3]
         Z_pred_y = kpts[:, 1::3]

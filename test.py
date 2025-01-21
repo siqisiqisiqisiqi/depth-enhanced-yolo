@@ -36,20 +36,21 @@ def visualization(image_path, results):
 for image_path in image_path_list:
 
     ############################## rgb inference ################################
-    m = ModelExt('./weights/rgb_detr.pt')
+    m = ModelExt('./exp/runs/pose/train24/weights/best.pt')
+    # m = ModelExt('./exp/runs/pose/train14/weights/best.pt')
     predictor = PoseRTDETRPredict(m)
     results = predictor.predict(image_path)
 
     ############################## visualization ################################
-    for r in results:
-        im_array = r.plot()
-        cv2.imshow("image", im_array)
-        k = cv2.waitKey(0)
-    if k == ord("q"):
-        break
-
-    # k = visualization(image_path, results)
+    # for r in results:
+    #     im_array = r.plot()
+    #     cv2.imshow("image", im_array)
+    #     k = cv2.waitKey(0)
     # if k == ord("q"):
     #     break
+
+    k = visualization(image_path, results)
+    if k == ord("q"):
+        break
 
 cv2.destroyAllWindows()

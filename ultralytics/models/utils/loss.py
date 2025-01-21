@@ -52,7 +52,9 @@ class DETRLoss(nn.Module):
 
         if loss_gain is None:
             loss_gain = {"class": 1, "bbox": 5, "giou": 2, "no_object": 0.1,
-                         "mask": 1, "dice": 1, "kpts": 1, "oks": 4, "kobj": 2}
+                         "mask": 1, "dice": 1, "kpts": 1, "oks": 2, "kobj": 2}
+            # loss_gain = {"class": 1, "bbox": 5, "giou": 2, "no_object": 0.1,
+            #              "mask": 1, "dice": 1, "kpts": 1, "oks": 4, "kobj": 2}
         self.nc = nc
         self.matcher = HungarianMatcher(
             cost_gain={"class": 2, "bbox": 5, "giou": 2}, with_kpts=with_kpts)
